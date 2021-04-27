@@ -27,6 +27,7 @@ enum Inner<S> {
 impl<S> SpawnReady<S> {
     /// Creates a new [`SpawnReady`] wrapping `service`.
     pub fn new(service: S) -> Self {
+        tracing::trace!("making new spawn ready");
         Self {
             inner: Inner::Service(Some(service)),
         }
@@ -35,8 +36,10 @@ impl<S> SpawnReady<S> {
 
 impl<S> Drop for SpawnReady<S> {
     fn drop(&mut self) {
+        tracing::trace!("dropping spawn ready");
         if let Inner::Future(ref mut task) = self.inner {
             task.abort();
+            tracing::trace!("aborted spawn ready task")
         }
     }
 }
@@ -62,6 +65,7 @@ where
                     let svc = svc.take().expect("illegal state");
                     let rx =
                         tokio::spawn(svc.ready_oneshot().map_err(Into::into).in_current_span());
+                    tracing::trace!("spawned spawn ready future");
                     Inner::Future(rx)
                 }
                 Inner::Future(ref mut fut) => {
